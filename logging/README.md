@@ -33,7 +33,7 @@ The following variables should be defined:
 |ocp_local_registry_validte_carts | Whether to validate the registry cert. Default is true. |
 |ocp_local_registry_insecure | Whether to use insecure (http). Default is false. Otherwise add your registry cert into ca-bundle | 
 | registry_auth| Auth token for the local registry and registry.redhat.io. |
-| logginc_cr | [Logging Custom Resource](https://docs.openshift.com/container-platform/4.2/logging/cluster-logging-deploying.html) |
+| logging_cr | [Logging Custom Resource](https://docs.openshift.com/container-platform/4.2/logging/cluster-logging-deploying.html) |
 
 registry.redhat.io authentication can be taken from [cloud.redhat.com](https://cloud.redhat.com) pull secret or by creating a Service Account at [registry.redhat.io](https://registry.redhat.io).
 
