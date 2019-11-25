@@ -29,7 +29,7 @@ The following variables should be defined:
 | k8s_api_endpoint | OpenShift API endpoint. Example api.ocp.example.com:6443|
 | k8s_admin  | cluster-admin user. Default is kubeadmin. |
 | k8s_validate_certs | Whether to validate API cert. Default is true. |
-[ocp_local_registry | The local registry. Example `my-registry.example.com:5000`. |
+| ocp_local_registry | The local registry. Example `my-registry.example.com:5000`. |
 |ocp_local_registry_validte_carts | Whether to validate the registry cert. Default is true. |
 |ocp_local_registry_insecure | Whether to use insecure (http). Default is false. Otherwise add your registry cert into ca-bundle | 
 | registry_auth| Auth token for the local registry and registry.redhat.io. |
