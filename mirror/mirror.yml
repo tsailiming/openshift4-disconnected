@@ -30,7 +30,7 @@
         - name: Create a temporarily directory
           tempfile:
             state: directory
-            suffix: operator
+            suffix: openshift
           register: tempfile_1
 
         - name: Save credential json file

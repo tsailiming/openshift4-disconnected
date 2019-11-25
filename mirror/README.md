@@ -1,6 +1,6 @@
+This playbook helps to mirror OpenShift repository into your local copy. 
 
-
-This playbook helps to mirror OpenShift repository into your local copy.
+`oc` command should be in your `$PATH`.
 
 You will need to define the following variables
 
