@@ -3,7 +3,7 @@ This is a repository to help deploy or manage OpenShift 4 in a disconnected envi
 
 # Ansible Playbooks
 * [Logging](/logging). This is to deploy Elasticsearch and Cluster Logging operator
-* Mirror OpenShift images (Coming soon)
+* [Mirror](/mirror) OpenShift images
 
 # Other Cool Resources
 - [https://openshift.tips/](https://openshift.tips/)
