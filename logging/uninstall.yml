@@ -1,0 +1,170 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    k8s_api_endpoint: https://api.ocp.ltsai.com:6443
+    k8s_admin_username: kubeadmin  
+    k8s_validate_certs: false
+    operators:
+      - elasticsearch-operator
+      - cluster-logging
+
+  vars_files:
+    - vault.yml
+
+  tasks:
+    - name: Clean up
+      block:
+        - name: Login to OpenShift
+          k8s_auth:
+            username: "{{ k8s_admin_username }}"
+            password: "{{ k8s_admin_password }}"
+            host: "{{ k8s_api_endpoint }}"
+            validate_certs: "{{ k8s_validate_certs | default(false) }} "
+          register: k8s_auth_results
+
+        - name: Delete the CatalogSource resource
+          k8s:
+            definition:
+              apiVersion: operators.coreos.com/v1alpha1
+              kind: CatalogSource
+              metadata:
+                name: "{{item}}-catalog"
+                namespace: openshift-marketplace
+            validate_certs: "{{ k8s_validate_certs | default(true) }} "
+            api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"            
+            host: "{{ k8s_api_endpoint }}"            
+            state: absent
+          with_items: "{{ operators }}"
+
+        - name: Delete ImageContentSourcePolicy
+          k8s:
+            definition:
+              apiVersion: operator.openshift.io/v1alpha1
+              kind: ImageContentSourcePolicy
+              metadata:
+                name: "{{item}}"
+            validate_certs: "{{ k8s_validate_certs | default(true) }} "
+            api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"            
+            host: "{{ k8s_api_endpoint }}"            
+            state: absent
+          with_items: "{{ operators }}"
+
+        - name: Find cluster logging instance
+          k8s_info:
+            api_version: logging.openshift.io/v1
+            kind: ClusterLogging
+            name: instance
+            namespace: openshift-logging
+            validate_certs: "{{ k8s_validate_certs | default(true) }} "
+            api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"            
+            host: "{{ k8s_api_endpoint }}"       
+          register: logging_instance
+      
+        - name: Delete cluster logging instance
+          k8s:
+            definition:
+              apiVersion: logging.openshift.io/v1
+              kind: ClusterLogging
+              metadata:
+                name: instance
+                namespace: openshift-logging
+            validate_certs: "{{ k8s_validate_certs | default(true) }} "   
+            api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"            
+            host: "{{ k8s_api_endpoint }}"            
+            state: absent
+          when: logging_instance.resources
+
+        - name: Delete cluster logging operator group
+          k8s:
+            definition:
+              apiVersion: operators.coreos.com/v1
+              kind: OperatorGroup
+              metadata:
+                name: openshift-logging
+                namespace: openshift-logging             
+            validate_certs: "{{ k8s_validate_certs | default(true) }} "
+            api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"            
+            host: "{{ k8s_api_endpoint }}"            
+            state: absent
+
+        - name: Delete Cluster Logging Subscription object 
+          k8s:
+            definition:          
+              apiVersion: operators.coreos.com/v1alpha1
+              kind: Subscription
+              metadata:
+                name: "cluster-logging"
+                namespace: "openshift-logging" 
+            validate_certs: "{{ k8s_validate_certs | default(true) }} "
+            api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"            
+            host: "{{ k8s_api_endpoint }}"            
+            state: absent
+
+        - name: Delete openshift-logging namespace
+          k8s:
+            definition:
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: openshift-logging
+            validate_certs: "{{ k8s_validate_certs | default(true) }} "
+            api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"            
+            host: "{{ k8s_api_endpoint }}"            
+            state: absent
+
+        - name: Delete Elasticsearch Subscription object
+          k8s:
+            definition:
+              apiVersion: operators.coreos.com/v1alpha1
+              kind: Subscription
+              metadata:
+                name: "elasticsearch-operator"
+                namespace: "openshift-operators" 
+            validate_certs: "{{ k8s_validate_certs | default(true) }} "
+            api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"            
+            host: "{{ k8s_api_endpoint }}"            
+            state: absent
+
+        - name: Enable auto rebooting for MCO
+          k8s:
+            definition:
+              apiVersion: machineconfiguration.openshift.io/v1
+              kind: MachineConfigPool
+              metadata:
+                name: master
+              spec:
+                paused: false
+            api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+            host: "{{ k8s_api_endpoint }}"            
+            validate_certs: "{{ k8s_validate_certs | default(true) }} "                   
+            state: present
+            
+      always:          
+        - name: If login succeeded, try to log out (revoke access token)      
+          k8s_auth:
+            state: absent
+            host: "{{ k8s_api_endpoint }}"
+            api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+            validate_certs: "{{ k8s_validate_certs | default(false) }}"
+          when: k8s_auth_results.failed == false
+
+- hosts: workers
+  gather_facts: false
+  become: yes
+  remote_user: core
+
+  vars:
+    ocp_local_registry: ocp4-registry.ocp.ltsai.com:5000
+
+  tasks:
+    - name: Delete operator registry image
+      podman_image:
+        name: "{{ocp_local_registry}}/operator-registry/{{item}}:latest"
+        state: absent
+      with_items:
+        - cluster-logging
+        - elasticsearch-operator
+

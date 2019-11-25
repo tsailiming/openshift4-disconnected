@@ -1,0 +1,15 @@
+---
+# defaults file for mirror-operator
+# vars file for mirror-operator
+operator_name: #logging-operator
+
+k8s_api_endpoint: 
+k8s_admin_username: kubeadmin
+k8s_admin_password: 
+k8s_validate_certs: true
+
+ocp_local_registry: 
+ocp_local_registry_validate_certs: true
+ocp_local_registry_insecure: false
+
+registry_auth:

@@ -1,0 +1,17 @@
+apiVersion: operator.openshift.io/v1alpha1
+kind: ImageContentSourcePolicy
+metadata:
+  name: "{{operator_name}}"
+spec:
+  repositoryDigestMirrors:
+  # - mirrors:
+  #   - example.io/example/ubi-minimal
+  #   source: registry.access.redhat.com/ubi8/ubi-minimal
+  # - mirrors:
+  #   - example.com/example/ubi-minimal
+  #   source: registry.access.redhat.com/ubi8/ubi-minimal
+{% for item in images %}
+  - mirrors:
+      - {{ocp_local_registry}}/{{ lookup('docker',item).path }}
+    source: {{ lookup('docker',item).name }}
+{% endfor %}

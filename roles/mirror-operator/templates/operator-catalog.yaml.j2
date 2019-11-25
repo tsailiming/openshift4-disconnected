@@ -1,0 +1,9 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: {{operator_name}}-catalog
+  namespace: openshift-marketplace
+spec:
+  displayName: "{{operator_name}}"
+  sourceType: grpc
+  image: "{{ocp_local_registry}}/operator-registry/{{operator_name}}:latest"

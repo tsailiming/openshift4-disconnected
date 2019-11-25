@@ -1,0 +1,163 @@
+---            
+- name: Operator Name
+  debug: 
+    var: operator_name
+
+- name: Build custom operator
+  block:    
+    - name: Disable the default OperatorSources
+      k8s:
+        definition:
+          kind: OperatorHub
+          apiVersion: config.openshift.io/v1
+          metadata:
+            name: cluster
+          spec:
+            disableAllDefaultSources: true
+        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+        validate_certs: "{{ k8s_validate_certs | default(true) }} "
+        host: "{{ k8s_api_endpoint }}"            
+        state: present
+
+    - name: Pull redhat-operator package list
+      uri: 
+        url: https://quay.io/cnr/api/v1/packages?namespace=redhat-operators 
+        body: json
+      register: packagelist
+
+    - name: Set fact logging operator version 
+      set_fact:
+        logging_operator_version: "{{ packagelist.json | selectattr('name', 'equalto', 'redhat-operators/' + operator_name) | map(attribute='releases') | first | sort_versions | last}}"
+
+    - name: Retrieve the digest
+      uri:
+        url: https://quay.io/cnr/api/v1/packages/redhat-operators/{{operator_name}}/{{logging_operator_version}}
+        body: json
+      register: operator_digest
+
+    - name: Create a temporarily directory
+      tempfile:
+        state: directory
+        suffix: operator
+      register: tempfile_1
+
+    - name: Take the digest and use it to pull the gzipped archive
+      uri:
+        url: https://quay.io/cnr/api/v1/packages/redhat-operators/{{operator_name}}/blobs/sha256/{{ operator_digest.json | json_query('[0].content.digest') }}
+        dest: "{{ tempfile_1.path }}/{{operator_name}}.tar.gz"
+
+    - name: Set fact manifest directory
+      set_fact:
+        manifest_dir: "{{ tempfile_1.path }}/manifests/"
+
+    - name: Create operator directory
+      file:
+        path: "{{ manifest_dir }}/{{operator_name}}"
+        state: directory
+        mode: '0755'
+
+    - name: Temporarily directory
+      debug:
+        var: tempfile_1.path
+
+    - name: Unpack gzipped archive
+      unarchive:  
+        src: "{{ tempfile_1.path }}/{{operator_name}}.tar.gz"
+        dest: "{{ tempfile_1.path }}/manifests/{{operator_name}}"
+
+    - name: Find all clusterserviceversion files
+      find:
+        paths: "{{ tempfile_1.path }}/manifests/{{operator_name}}"
+        patterns: '*.clusterserviceversion.yaml'
+        recurse: yes
+      register: csv_files
+
+    - name: Find container images
+      include_vars: 
+        file: "{{ item.path }}"      
+        name: csv_{{my_idx}} 
+      loop: "{{ csv_files.files }}"
+      loop_control:
+        index_var: my_idx
+        label: "{{ item.path | basename }}"
+
+    - name: Set fact the list of operator images
+      set_fact:
+        images:  "{{ images }} + {{ lookup('vars', 'csv_' + my_idx | string) | json_query('spec.install.spec.deployments[].spec.template.spec.containers[].image[]')}}"
+      loop: "{{ csv_files.files }}"
+      loop_control:
+        index_var: my_idx
+        label: "{{ item.path | basename }}"
+
+    - name: Set fact for the list of images that operator uses
+      set_fact:
+        images:  "{{ images }} + {{ lookup('vars', 'csv_' + my_idx | string) | to_json | from_json | json_query(query) }}"
+      loop: "{{ csv_files.files }}"
+      loop_control:
+        index_var: my_idx
+        label: "{{ item.path | basename }}"
+      vars:
+        query: "spec.install.spec.deployments[].spec.template.spec.containers[].env[].value | [?starts_with(@, 'quay.io') || starts_with(@, 'registry.redhat.io')]"
+
+    - name: List of images
+      debug:
+        var: images
+
+    - name: Copy Docker build file
+      copy:
+        src: custom-registry.Dockerfile
+        dest: "{{ tempfile_1.path }}/Dockerfile"
+
+    - name: Set fact registry credential json file
+      set_fact: 
+        registry_cred_file: "{{tempfile_1.path}}/cred.json"
+
+    - name: Save credential json file
+      copy: 
+        content: "{{ registry_auth }}"
+        dest: "{{ registry_cred_file }}"
+
+    - name: Build operator registry image
+      podman_image:
+        name: "{{operator_name}}"
+        path: "{{ tempfile_1.path }}"
+        auth_file: "{{ registry_cred_file }}"
+
+    # Can't use podman_image because validate_certs:no does not translate to 
+    # --tls-verify=false
+    # https://github.com/ansible/ansible/blob/devel/lib/ansible/modules/cloud/podman/podman_image.py#L507
+    # Otherwise, need to configure insecure registry
+    - name: Push operator registry image to internal registry
+      command: podman push {{operator_name}} "{{ocp_local_registry}}/operator-registry/{{operator_name}}:latest" --tls-verify={{ocp_local_registry_validate_certs | default(true) }} --authfile="{{registry_cred_file}}"
+
+    - name: Mirror images to internal registry
+      command: oc image mirror {{item}} {{ocp_local_registry}}/{{ lookup('docker',item).path }} -a "{{registry_cred_file}}" --insecure={{ocp_local_registry_insecure| default(false) }}
+      loop: "{{ images }}"
+
+    - name: Create the CatalogSource resource
+      k8s:
+        definition: "{{ lookup('template', 'operator-catalog.yaml.j2') }}"
+        validate_certs: "{{ k8s_validate_certs | default(true) }} "
+        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"            
+        host: "{{ k8s_api_endpoint }}"            
+        state: present
+
+    - name: Create ImageContentSourcePolicy
+      k8s:
+        definition: "{{ lookup('template', 'imagecontentsourcepolicy.yaml.j2') }}"
+        validate_certs: "{{ k8s_validate_certs | default(true) }} "
+        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"            
+        host: "{{ k8s_api_endpoint }}"            
+        state: present
+  
+  always:   
+    - name: Clean up temporarily directory
+      file:
+        path: "{{ tempfile_1 }}"
+        state: absent
+      when: tempfile_1 is defined
+
+
+
+
+    

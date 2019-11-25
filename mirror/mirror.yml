@@ -1,0 +1,23 @@
+# https://docs.openshift.com/container-platform/4.2/installing/installing_restricted_networks/installing-restricted-networks-preparations.html
+---
+- hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    product_repo: openshift-release-dev # Do not change
+    release_name: ocp-release # Do not change
+
+    ocp_release: 4.2.4
+    local_registry: ocp4-registry.ocp.ltsai.com:5000
+    local_repository: ocp4/openshift
+
+    
+  tasks:
+    - name: Mirror OpenShift registry to local
+      command: |
+      oc adm -a {{local_secret_json}} release mirror 
+        --from=quay.io/{{product_repo}/{{release_name}:{{ocp_release} 
+        --to={{{local_registry}}/{{local_repository}} 
+        --to-release-image={{local_registry}}/{{local_repository}:${ocp_release}}
+

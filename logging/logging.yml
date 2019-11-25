@@ -1,0 +1,130 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    k8s_api_endpoint: https://api.ocp.ltsai.com:6443
+    k8s_admin_username: kubeadmin  
+    ocp_local_registry: ocp4-registry.ocp.ltsai.com:5000
+    k8s_validate_certs: false
+    ocp_local_registry_validate_certs: false
+    ocp_local_registry_insecure: true
+    
+    logging_cr: 
+      apiVersion: logging.openshift.io/v1
+      kind: ClusterLogging
+      metadata:
+        name: instance
+        namespace: openshift-logging
+      spec:
+        managementState: Managed
+        logStore:
+          type: elasticsearch
+          elasticsearch:
+            nodeCount: 3
+            redundancyPolicy: SingleRedundancy
+            storage: {}
+        visualization:
+          type: kibana
+          kibana:
+            replicas: 1
+        curation:
+          type: curator
+          curator:
+            schedule: 30 3 * * *
+        collection:
+          logs:
+            type: fluentd
+            fluentd: {}
+
+  # Define this in vault.yml 
+  # k8s_admin_password: XXXX
+  # registry_auth:
+  #   auths:
+  #     my-registry:5000: 
+  #       auth: XXX
+  #     registry.redhat.io:
+  #       auth: XXX
+  vars_files:
+    - vault.yml
+
+  tasks:
+    - name: Deploy logging
+      block:
+        - name: Login to OpenShift
+          k8s_auth:
+            username: "{{ k8s_admin_username }}"
+            password: "{{ k8s_admin_password }}"
+            host: "{{ k8s_api_endpoint }}"
+            validate_certs: "{{ k8s_validate_certs | default(false) }} "
+          register: k8s_auth_results
+
+        - name: Disable auto rebooting for MCO
+          k8s:
+            definition:
+              apiVersion: machineconfiguration.openshift.io/v1
+              kind: MachineConfigPool
+              metadata:
+                name: master
+              spec:
+                paused: true
+            api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+            host: "{{ k8s_api_endpoint }}"
+            validate_certs: "{{ k8s_validate_certs | default(true) }} "       
+            state: present
+
+        - name: Mirror operator
+          include_role:
+            name: ../roles/mirror-operator
+          with_items:
+            - cluster-logging
+            - elasticsearch-operator
+          vars:
+            operator_name: "{{ item }}"
+        
+        - name: Enable auto rebooting for MCO
+          k8s:
+            definition:
+              apiVersion: machineconfiguration.openshift.io/v1
+              kind: MachineConfigPool
+              metadata:
+                name: master
+              spec:
+                paused: false
+            api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+            host: "{{ k8s_api_endpoint }}"            
+            validate_certs: "{{ k8s_validate_certs | default(true) }} "                   
+            state: present
+    
+        - name: Wait for MCO to be updated
+          pause:
+            minutes: 15
+
+        - name: Deploy logging CR
+          include_role: 
+            name: ../roles/deploy-logging
+
+      always:              
+        - name: Enable auto rebooting for MCO
+          k8s:
+            definition:
+              apiVersion: machineconfiguration.openshift.io/v1
+              kind: MachineConfigPool
+              metadata:
+                name: master
+              spec:
+                paused: false
+            api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+            host: "{{ k8s_api_endpoint }}"            
+            validate_certs: "{{ k8s_validate_certs | default(true) }} "                   
+            state: present
+          when: k8s_auth_results.failed == false
+
+        - name: If login succeeded, try to log out (revoke access token)      
+          k8s_auth:
+            state: absent
+            host: "{{ k8s_api_endpoint }}"
+            api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+            validate_certs: "{{ k8s_validate_certs | default(false) }} "
+          when: k8s_auth_results.failed == false
