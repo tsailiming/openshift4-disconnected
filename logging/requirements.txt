@@ -39,7 +39,7 @@ MarkupSafe==1.1.1
 oauthlib==3.1.0
 openshift==0.10.0
 ovirt-engine-sdk-python==4.3.3
-paramiko==2.1.1
+paramiko==2.1.6
 passlib==1.6.5
 pciutils==1.7.3
 perf==0.1
