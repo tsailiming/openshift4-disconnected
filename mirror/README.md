@@ -26,7 +26,7 @@ registry_auth:
 
 ### OpenShift version
 
-Refer to this [article](https://access.redhat.com/solutions/4583231).
+To mirror a version for upgrading, refer to this [article](https://access.redhat.com/solutions/4583231).
 
 Alternatively, you can run this
 `$ curl -sH 'Accept:application/json' 'https://api.openshift.com/api/upgrades_info/v1/graph?channel=stable-4.2' | ./graph.sh | dot -Tsvg | magick - /tmp/graph.png`
@@ -38,3 +38,11 @@ graph.sh is available [here](https://github.com/openshift/cincinnati/blob/master
 dot is from Graphviz
 
 magick is from ImageMagick
+
+### OpenShift Upgrade
+
+`oc adm upgrade --to-image {local_registry}/{local_repository}:{ocp_release}`
+
+Example:
+`oc adm upgrade --to-image ocp4-registry.ocp.ltsai.com:5000/ocp4/openshift:4.2.7`
+
