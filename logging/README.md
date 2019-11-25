@@ -55,3 +55,6 @@ On RHEL 7, the python-jinja2 is too old and needs to be updated. You can use a v
 
 ``` virtualenv --system-site-packages my-virtual-env```, this will prevent the  libselinux-python issue in the virtual environment
 
+### API error
+Sometimes you will get `Service Unavailable` or `Failed to obtain an authorization token` errors due to MCO being applied and nodes are being rebooted. You can wait till all the nodes are ready and rerun the playbook again. 
+
