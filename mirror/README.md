@@ -1,4 +1,5 @@
 
+
 This playbook helps to mirror OpenShift repository into your local copy.
 
 You will need to define the following variables
@@ -18,17 +19,19 @@ registry_auth:
      my-registry.example.com:5000: 
        auth: XXX
      registry.redhat.io:
-        auth: XXX
+       auth: XXX
      quay.io:
        auth: XXX
 ```
 
 ### OpenShift version
 
-Refer to this [article](https://access.redhat.com/solutions/4583231)
+Refer to this [article](https://access.redhat.com/solutions/4583231).
 
-Alternatively, run this
+Alternatively, you can run this
 `$ curl -sH 'Accept:application/json' 'https://api.openshift.com/api/upgrades_info/v1/graph?channel=stable-4.2' | ./graph.sh | dot -Tsvg | magick - /tmp/graph.png`
+
+![graph](images/graph.png)
 
 graph.sh is available [here](https://github.com/openshift/cincinnati/blob/master/hack/graph.sh)
 
