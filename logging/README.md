@@ -23,6 +23,7 @@ The local registry is the repository that OpenShift is using for disconnected in
 The playbook uses a `local` connection. 
 
 The following variables should be defined:
+
 | Name | Description |
 | -- | -- |
 | k8s_api_endpoint | OpenShift API endpoint. Example api.ocp.example.com:6443|
