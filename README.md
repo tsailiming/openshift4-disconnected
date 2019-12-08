@@ -1,5 +1,5 @@
 # Introduction
-This is a repository to help deploy or manage OpenShift 4 in a disconnected environments. 
+This is a repository to help deploy or manage OpenShift 4 in a disconnected environment.
 
 # Ansible Playbooks
 * [Logging](/logging). This is to deploy Elasticsearch and Cluster Logging operator
