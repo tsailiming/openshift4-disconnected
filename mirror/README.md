@@ -26,10 +26,10 @@ registry_auth:
 
 ### OpenShift version
 
-To mirror a version for upgrading, refer to this [article](https://access.redhat.com/solutions/4583231).
+To mirror a version for upgrading, refer to [this](https://access.redhat.com/solutions/4583231) and [this](https://access.redhat.com/solutions/4606811) 
 
 Alternatively, you can run this
-`$ curl -sH 'Accept:application/json' 'https://api.openshift.com/api/upgrades_info/v1/graph?channel=stable-4.2' | ./graph.sh | dot -Tsvg | magick - /tmp/graph.png`
+`$ curl -sH 'Accept:application/json' 'https://api.openshift.com/api/upgrades_info/v1/graph?channel=stable-4.2&arch=amd64' | ./graph.sh | dot -Tsvg | magick - /tmp/graph.png`
 
 ![graph](images/graph.png)
 
