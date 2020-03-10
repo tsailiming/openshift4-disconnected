@@ -8,7 +8,7 @@
     product_repo: openshift-release-dev # Do not change
     release_name: ocp-release # Do not change
 
-    ocp_release: 4.2.7
+    ocp_release: 4.2.20-x86_64
     local_registry: ocp4-registry.ocp.ltsai.com:5000
     local_repository: ocp4/openshift
     local_registry_insecure: true
@@ -21,6 +21,7 @@
   #       auth: XXX
   #     quay.io:
   #       auth: XXX
+
   vars_files:
     - vault.yml
 
@@ -38,13 +39,27 @@
             content: "{{ registry_auth }}"
             dest: "{{ tempfile_1.path }}/cred.json"
 
-        - name: Mirror OpenShift {{ocp_release}} registry to local registry
-          command: |
-            oc adm -a {{ tempfile_1.path }}/cred.json release mirror 
+        - name: "Mirror OpenShift {{ocp_release}} to {{local_registry}}/{{local_repository}}"              
+          shell: >
+            oc adm -a {{ tempfile_1.path }}/cred.json release mirror
             --from=quay.io/{{product_repo}}/{{release_name}}:{{ocp_release}}
-            --to={{local_registry}}/{{local_repository}} 
+            --to={{local_registry}}/{{local_repository}}
             --to-release-image={{local_registry}}/{{local_repository}}:{{ocp_release}}
+            --insecure={{local_registry_insecure| default(false) }} 2>&1
+          register: output
+
+        - name: Write out oc output to /tmp/oc.output.txt
+          copy:
+            content: "{{output.stdout}}"
+            dest: /tmp/oc.output.txt
+
+        - name: Extract openshift-install to /tmp/openshift-install
+          command: |
+            oc adm -a {{ tempfile_1.path }}/cred.json release extract
+            --command=openshift-install {{local_registry}}/{{local_repository}}:{{ocp_release}}
             --insecure={{local_registry_insecure| default(false) }}
+          args:
+            chdir: /tmp
 
       always:
         - name: Clean up temporarily directory
