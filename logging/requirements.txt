@@ -11,7 +11,7 @@ chardet==2.2.1
 cloud-init==18.5
 colorama==0.3.9
 configobj==4.7.2
-cryptography==1.7.2
+cryptography==3.2
 decorator==3.4.0
 dictdiffer==0.8.0
 docker-image-py==0.1.10
