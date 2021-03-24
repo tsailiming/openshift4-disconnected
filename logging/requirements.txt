@@ -69,7 +69,7 @@ regex==2019.11.1
 requests==2.6.0
 requests-oauthlib==1.2.0
 rhnlib==2.5.65
-rsa==3.4.2
+rsa==4.1
 ruamel.ordereddict==0.4.14
 ruamel.yaml==0.16.5
 ruamel.yaml.clib==0.2.0
