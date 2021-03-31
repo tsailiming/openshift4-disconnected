@@ -32,7 +32,7 @@ jsonpatch==1.2
 jsonpointer==1.9
 kitchen==1.1.1
 kubernetes==10.0.1
-lxml==3.2.1
+lxml==4.6.3
 M2Crypto==0.21.1
 Magic-file-extensions==0.2
 MarkupSafe==1.1.1
