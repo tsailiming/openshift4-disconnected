@@ -83,7 +83,7 @@ slip.dbus==0.4.0
 subscription-manager==1.24.13
 syspurpose==1.24.13
 urlgrabber==3.10
-urllib3==1.25.3
+urllib3==1.26.5
 virtualenv==16.7.7
 websocket-client==0.56.0
 yum-metadata-parser==1.1.4
