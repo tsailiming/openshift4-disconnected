@@ -1,6 +1,6 @@
 ansible==2.9.1
 awscli==1.16.226
-Babel==0.9.6
+Babel==2.9.1
 backports.ssl-match-hostname==3.5.0.1
 boto==2.34.0
 botocore==1.12.216
