@@ -5,7 +5,7 @@ backports.ssl-match-hostname==3.5.0.1
 boto==2.34.0
 botocore==1.12.216
 cachetools==3.1.1
-certifi==2019.9.11
+certifi==2022.12.7
 cffi==1.6.0
 chardet==2.2.1
 cloud-init==18.5
